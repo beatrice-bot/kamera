@@ -1,7 +1,7 @@
 {
   "name": "netlify-camera-bot",
   "version": "1.0.0",
-  "description": "A simple project for testing camera access and a Telegram bot with Netlify Functions.",
+  "description": "Project for sending photos from a website to a Telegram bot via Netlify Functions.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -10,6 +10,7 @@
   "author": "Your Name",
   "license": "ISC",
   "dependencies": {
-    "node-fetch": "^2.6.7"
+    "axios": "^1.7.2",
+    "form-data": "^4.0.0"
   }
 }
